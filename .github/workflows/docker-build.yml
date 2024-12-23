@@ -21,5 +21,6 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:lts .
-          docker push ghcr.io/${{ github.repository }}:lts
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ghcr.io/${REPO_NAME}:lts .
+          docker push ghcr.io/${REPO_NAME}:lts
