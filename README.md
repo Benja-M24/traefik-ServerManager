@@ -58,7 +58,7 @@ services:
     environment:
     - ENVIRONMENT=example
     labels:
-     - traefik.enable=true
+      - traefik.enable=true
       - traefik.http.routers.project-http.rule=Host(`${DOMAIN}`)
       - traefik.http.routers.project-http.entrypoints=http
       - traefik.http.routers.project-http.middlewares=https-redirect
@@ -76,3 +76,81 @@ networks:
   traefik-server:
     external: true
 ```
+# How to setup cloudflare DNS as TLS certificate provider
+1. Go to the Cloudflare dashboard and copy the API Token.
+2. Create a file named cloudflare.ini in the root directory of your project and add the following content:
+
+```cloudflare.ini	
+dns_cloudflare_email = YOUR_CLOUDFLARE_EMAIL
+dns_cloudflare_api_key = YOUR_CLOUDFLARE_API_KEY
+```
+3. Update the docker-compose.yml file to include the following labels for Traefik:
+
+```docker-compose.yml
+services:
+  traefik:
+    image: traefik:3.0
+    ports:
+      - 80:80 # HTTP port
+      - 443:443 # HTTPS port
+    restart: always
+    labels:
+      # Traefik configuration
+      - traefik.enable=true
+      - traefik.docker.network=traefik-server
+      - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
+
+      # HTTP router configuration
+      - traefik.http.routers.traefik-dashboard-http.entrypoints=http
+      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN?Variable not set}`)
+
+      # HTTPS router configuration
+      - traefik.http.routers.traefik-dashboard-https.entrypoints=https
+      - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.traefik-dashboard-https.tls=true
+      - traefik.http.routers.traefik-dashboard-https.tls.certresolver=dns-cloudflare
+      - traefik.http.routers.traefik-dashboard-https.service=api@internal
+
+      # HTTPS redirect middleware
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
+
+      # HTTP Basic Auth middleware
+      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
+      - traefik-server-certificates:/certificates # Certificate storage
+      - /path/to/cloudflare.ini:/etc/traefik/cloudflare.ini
+    command:
+      # Docker provider configuration
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+
+      # Entrypoints configuration
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
+
+      # Let's Encrypt configuration
+      - --certificatesresolvers.dns-cloudflare.acme.email=${ACME_EMAIL?Variable not set}
+      - --certificatesresolvers.dns-cloudflare.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.dns-cloudflare.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.dns-cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53
+
+      # Logging and API configuration
+      - --accesslog
+      - --log
+      - --api
+
+    networks:
+      - traefik-server # Public network for Traefik and other services
+
+volumes:
+  traefik-server-certificates: # Persistent volume for certificates
+
+networks:
+  traefik-server:
+    external: true # Use pre-existing traefik-server network
+```	
+With this configuration, Traefik will use Cloudflare to resolve TLS certificates via the DNS challenge. Make sure to restart the Traefik container after making these changes.

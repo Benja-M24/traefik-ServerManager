@@ -1,11 +1,31 @@
 services:
+# WatchTower
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: 
+      - "--label-enable"
+      - "--interval"
+      - "30"
+      - "--rolling-restart"
+    environment:
+      - WATCHTOWER_SCOPE=main-images
+    networks:
+      - traefik-server
+# Traefik
   traefik:
-    image: traefik:3.0
+    image: ghcr.io/Benja-M24/traefik-ServerManager.git
     ports:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
     restart: always
     labels:
+      # WatchTower monitoring
+      - com.centurylinklabs.watchtower.enable=true
+      - com.centurylinklabs.watchtower.scope=main-images
+
       # Traefik configuration
       - traefik.enable=true
       - traefik.docker.network=traefik-server
@@ -60,4 +80,3 @@ volumes:
 networks:
   traefik-server:
     external: true # Use pre-existing traefik-server network
-
