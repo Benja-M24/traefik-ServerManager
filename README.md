@@ -7,7 +7,7 @@ Using docker create only one traefik container to manage every project on my ser
 1. Clone the Repository
 
 ```git 
-git clone https://github.com/Benja-M24/traefik-ServerManager.git
+git clone https://github.com/Benja-M24/traefik-servermanager.git
 ```
 2. Create Docker Network
 Traefik and the projects need to communicate over a shared Docker network.
