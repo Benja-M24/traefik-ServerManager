@@ -16,7 +16,7 @@ services:
       - traefik-server
 # Traefik
   traefik:
-    image: ghcr.io/Benja-M24/traefik-ServerManager.git
+    image: ghcr.io/Benja-M24/traefik-ServerManager:lts
     ports:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
