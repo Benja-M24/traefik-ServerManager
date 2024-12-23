@@ -154,3 +154,7 @@ networks:
     external: true # Use pre-existing traefik-server network
 ```	
 With this configuration, Traefik will use Cloudflare to resolve TLS certificates via the DNS challenge. Make sure to restart the Traefik container after making these changes.
+
+# Generarte images and push to GHCR 
+docker build -t ghcr.io/benja-m24/traefik-servermanager:lts .
+docker push ghcr.io/benja-m24/traefik-servermanager:lts
