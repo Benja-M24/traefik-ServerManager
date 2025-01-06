@@ -8,7 +8,7 @@ services:
     command: 
       - "--label-enable"
       - "--interval"
-      - "30"
+      - "3600"
       - "--rolling-restart"
     networks:
       - traefik-server
@@ -18,11 +18,17 @@ services:
     ports:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
+      - 25:25 # SMTP port
     restart: always
     labels:
       # WatchTower monitoring testing
       - com.centurylinklabs.watchtower.enable=true
       - com.centurylinklabs.watchtower.scope=main-images
+
+      #SMTP Configuration
+      - "traefik.tcp.routers.nextcloud-smtp.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.nextcloud-smtp.entrypoints=smtp"
+      - "traefik.tcp.services.nextcloud-smtp.loadbalancer.server.port=25"
 
       # Traefik configuration
       - traefik.enable=true
@@ -52,6 +58,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
     command:
+      # - --log.level=DEBUG
+      
+      # Smtp configuration
+      - --entrypoints.smtp.address=:25
+      
       # Docker provider configuration
       - --providers.docker
       - --providers.docker.exposedbydefault=false
