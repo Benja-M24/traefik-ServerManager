@@ -18,7 +18,12 @@ services:
     ports:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
-      - 25:25 # SMTP port
+      # SMTP ports
+      - 25:25 
+      - 143:143 # No SSL/TLS
+      - 465:465 # SSL/TLS
+      - 587:587 # Submission STARTTLS
+      - 993:993 # IMAP STARTTLS
     restart: always
     labels:
       # WatchTower monitoring testing
