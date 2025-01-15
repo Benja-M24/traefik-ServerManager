@@ -19,11 +19,11 @@ services:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
       # SMTP ports
-      - 25:25 
-      - 143:143 # No SSL/TLS
-      - 465:465 # SSL/TLS
-      - 587:587 # Submission STARTTLS
-      - 993:993 # IMAP STARTTLS
+      # - 25:25 
+      # - 143:143 # No SSL/TLS
+      # - 465:465 # SSL/TLS
+      # - 587:587 # Submission STARTTLS
+      # - 993:993 # IMAP STARTTLS
     restart: always
     labels:
       # WatchTower monitoring testing
@@ -67,14 +67,18 @@ services:
       
       # Smtp configuration
       - --entrypoints.smtp.address=:25
+      - --entrypoints.smtps.address=:465
+      - --entrypoints.submission.address=:587
+      - --entrypoints.imap.address=:143
+      - --entrypoints.imaps.address=:993
+      
+      # Entrypoints configuration
+      - --entrypoints.http.address=:80
+      - --entrypoints.https.address=:443
       
       # Docker provider configuration
       - --providers.docker
       - --providers.docker.exposedbydefault=false
-
-      # Entrypoints configuration
-      - --entrypoints.http.address=:80
-      - --entrypoints.https.address=:443
 
       # Let's Encrypt configuration
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL?Variable not set}
