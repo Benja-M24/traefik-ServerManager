@@ -5,7 +5,7 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: 
+    command:
       - "--label-enable"
       - "--interval"
       - "3600"
@@ -19,38 +19,33 @@ services:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
       # SMTP ports
-      # - 25:25 
-      # - 143:143 # No SSL/TLS
-      # - 465:465 # SSL/TLS
-      # - 587:587 # Submission STARTTLS
-      # - 993:993 # IMAP STARTTLS
+      - 25:25
+      - 143:143 # No SSL/TLS
+      - 465:465 # SSL/TLS
+      - 587:587 # Submission STARTTLS
+      - 993:993 # IMAP STARTTLS
     restart: always
     labels:
       # WatchTower monitoring testing
       - com.centurylinklabs.watchtower.enable=true
       - com.centurylinklabs.watchtower.scope=main-images
-
       #SMTP Configuration
-      - "traefik.tcp.routers.nextcloud-smtp.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.nextcloud-smtp.entrypoints=smtp"
-      - "traefik.tcp.services.nextcloud-smtp.loadbalancer.server.port=25"
-
+      # - traefik.tcp.routers.nextcloud-smtp.rule=HostSNI(`*`)
+      # - traefik.tcp.routers.nextcloud-smtp.entrypoints=smtp
+      # - traefik.tcp.services.nextcloud-smtp.loadbalancer.server.port=25
       # Traefik configuration
       - traefik.enable=true
       - traefik.docker.network=traefik-server
       - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
-
       # HTTP router configuration
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
       - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN?Variable not set}`)
-
       # HTTPS router configuration
       - traefik.http.routers.traefik-dashboard-https.entrypoints=https
       - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN?Variable not set}`)
       - traefik.http.routers.traefik-dashboard-https.tls=true
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
-
       # HTTPS redirect middleware
       - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
@@ -63,28 +58,23 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
     command:
-      # - --log.level=DEBUG
-      
+      - --log.level=DEBUG
       # Smtp configuration
       - --entrypoints.smtp.address=:25
       - --entrypoints.smtps.address=:465
       - --entrypoints.submission.address=:587
       - --entrypoints.imap.address=:143
       - --entrypoints.imaps.address=:993
-      
       # Entrypoints configuration
       - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
-      
       # Docker provider configuration
       - --providers.docker
       - --providers.docker.exposedbydefault=false
-
       # Let's Encrypt configuration
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL?Variable not set}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
       - --certificatesresolvers.le.acme.tlschallenge=true
-
       # Logging and API configuration
       - --accesslog
       - --log
