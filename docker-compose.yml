@@ -60,11 +60,11 @@ services:
     command:
       - --log.level=DEBUG
       # Smtp configuration
-      - --entrypoints.smtp.address=:25
-      - --entrypoints.smtps.address=:465
-      - --entrypoints.submission.address=:587
-      - --entrypoints.imap.address=:143
-      - --entrypoints.imaps.address=:993
+      - --entrypoints.smtp.address=:25/tcp
+      - --entrypoints.smtps.address=:465/tcp
+      - --entrypoints.submission.address=:587/tcp
+      - --entrypoints.imap.address=:143/tcp
+      - --entrypoints.imaps.address=:993/tcp
       # Entrypoints configuration
       - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
