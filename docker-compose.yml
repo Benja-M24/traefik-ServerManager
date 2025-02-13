@@ -57,6 +57,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
+    environment:
+      - CF_API_TOKEN=${CF_API_TOKEN}  # Token Cloudflare DNS:Edit
     command:
       - --log.level=DEBUG
       # Smtp configuration
@@ -74,7 +76,10 @@ services:
       # Let's Encrypt configuration
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL?Variable not set}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
-      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge=true
+      - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.le.acme.dnschallenge.delaybeforecheck=30
+      - --certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
       # Logging and API configuration
       - --accesslog
       - --log
