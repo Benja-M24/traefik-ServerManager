@@ -58,7 +58,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
     environment:
-      - CF_API_TOKEN=${CF_API_TOKEN}  # Token Cloudflare DNS:Edit
+      - CLOUDFLARE_DNS_API_TOKEN=${CF_API_TOKEN}  # Token Cloudflare DNS:Edit
     command:
       - --log.level=DEBUG
       # Smtp configuration
