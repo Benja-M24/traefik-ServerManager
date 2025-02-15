@@ -62,6 +62,7 @@ services:
     command:
       - --log.level=DEBUG
       # Smtp configuration
+      - --providers.docker.network=traefik-server
       - --entrypoints.smtp.address=:25/tcp
       - --entrypoints.smtps.address=:465/tcp
       - --entrypoints.submission.address=:587/tcp
@@ -92,9 +93,10 @@ volumes:
 
 networks:
   traefik-server:
+    name: traefik-server
     driver: bridge
     enable_ipv6: true
     ipam:
       config:
-        - subnet: 172.22.1.0/24  # IPv4
+        - subnet: 172.64.1.0/24  # IPv4
         - subnet: fd00:1::/64    # IPv6
