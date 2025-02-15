@@ -92,4 +92,9 @@ volumes:
 
 networks:
   traefik-server:
-    external: true # Use pre-existing traefik-server network
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.22.1.0/24  # IPv4
+        - subnet: fd00:1::/64    # IPv6
