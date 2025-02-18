@@ -29,31 +29,32 @@ services:
       # WatchTower monitoring testing
       - com.centurylinklabs.watchtower.enable=true
       - com.centurylinklabs.watchtower.scope=main-images
-      #SMTP Configuration
-      # - traefik.tcp.routers.nextcloud-smtp.rule=HostSNI(`*`)
-      # - traefik.tcp.routers.nextcloud-smtp.entrypoints=smtp
-      # - traefik.tcp.services.nextcloud-smtp.loadbalancer.server.port=25
       # Traefik configuration
       - traefik.enable=true
       - traefik.docker.network=traefik-server
-      - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
-      # HTTP router configuration
-      - traefik.http.routers.traefik-dashboard-http.entrypoints=http
-      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN?Variable not set}`)
-      # HTTPS router configuration
+
+      # Middleware configuration
+      ## 1- security-headers middleware
+      - traefik.http.middlewares.security-headers.headers.sslredirect=true
+      - traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true
+      - traefik.http.middlewares.security-headers.headers.stspreload=true
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin
+      ## 2- HTTP Basic Auth middleware
+      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+      
+      # HTTP router configuration for Traefik dashboard
+      ## HTTP router
       - traefik.http.routers.traefik-dashboard-https.entrypoints=https
       - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN?Variable not set}`)
       - traefik.http.routers.traefik-dashboard-https.tls=true
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
-      # HTTPS redirect middleware
-      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
-      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
-      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
+      ## Aplicate middlewares
+      - traefik.http.routers.traefik-dashboard-https.middlewares=security-headers,admin-auth
 
-      # HTTP Basic Auth middleware
-      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
-      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
@@ -87,6 +88,11 @@ services:
       - --api
     networks:
       - traefik-server # Public network for Traefik and other services
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
 
 volumes:
   traefik-server-certificates: # Persistent volume for certificates
