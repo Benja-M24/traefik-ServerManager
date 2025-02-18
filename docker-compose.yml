@@ -82,9 +82,7 @@ services:
       - --entrypoints.http.http.redirections.entrypoint.to=https
       - --entrypoints.http.http.redirections.entrypoint.scheme=https
       # HTTP/3
-      - --experimental.http3=true
       - --entrypoints.https.http3=true
-      - --entrypoints.https.http3.advertisedPort=443
       - --entrypoints.https.tls.domains[0].main=${DOMAIN}
       - --entrypoints.https.tls.minVersion=VersionTLS13
       - --entrypoints.https.tls.options=modern@file
