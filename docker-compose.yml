@@ -48,6 +48,9 @@ services:
       - traefik.http.middlewares.security-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin
       ## 3 - HTTP Basic Auth middleware
       - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+      ## 4 - Rate limiting middleware
+      - traefik.http.middlewares.metrics-ratelimit.ratelimit.average=30
+      - traefik.http.middlewares.metrics-ratelimit.ratelimit.burst=50
       
       # HTTP router configuration for Traefik dashboard
       ## HTTP router
@@ -60,6 +63,18 @@ services:
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
       ## Aplicate middlewares
       - traefik.http.routers.traefik-dashboard-https.middlewares=https-redirect,security-headers,admin-auth
+
+      # HTTP router configuration for Traefik metrics
+      ## HTTP router
+      - traefik.http.routers.metrics.rule=Host(`metrics.${DOMAIN}`)
+      - traefik.http.routers.metrics.entrypoints=https
+      - traefik.http.routers.metrics.tls=true
+      - traefik.http.routers.metrics.tls.certresolver=le
+      - traefik.http.routers.metrics.service=metrics@internal
+      - traefik.http.services.metrics.loadbalancer.server.port=8082
+      # Protección básica (recomendado)
+      - traefik.http.routers.metrics.middlewares=auth-metrics,security-headers,metrics-ratelimit
+      - traefik.http.middlewares.auth-metrics.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
@@ -78,17 +93,24 @@ services:
       # Entrypoints configuration
       - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
+      - --entrypoints.metrics.address=:8082
       # HTTP redirection configuration
       - --entrypoints.http.http.redirections.entrypoint.to=https
       - --entrypoints.http.http.redirections.entrypoint.scheme=https
       # HTTP/3
       - --entrypoints.https.http3=true
-      - --entrypoints.https.tls.domains[0].main=${DOMAIN}
+      - --http.transport.http2.maxConcurrentStreams=100
       - --entrypoints.https.tls.minVersion=VersionTLS13
+      ## TODO CREATE A FILE TO IMPROVE SECURITY HEADERS https://securityheaders.com/
       - --entrypoints.https.tls.options=modern@file
-      - --metrics.prometheus=true
-      - --metrics.prometheus.entrypoint=metrics
-      - --entrypoints.metrics.address=:8082
+      # Metrics configuration
+      - --metrics.prometheus.manualRouting=true
+      - --metrics.prometheus.addentrypointslabels=true
+      - --metrics.prometheus.addserviceslabels=true
+      - --metrics.prometheus.addRoutersLabels=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+      - --metrics.prometheus.addSystemMetrics=true  # CPU/Memoria
+      - --metrics.prometheus.addGoMetrics=true      # GC/Memstats
       # Docker provider configuration
       - --providers.docker
       - --providers.docker.exposedbydefault=false
@@ -97,15 +119,12 @@ services:
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
       - --certificatesresolvers.le.acme.dnschallenge=true
       - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
-      - --certificatesresolvers.le.acme.dnschallenge.delaybeforecheck=30
       - --certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
       - --certificatesresolvers.le.acme.dnschallenge.delaybeforecheck=60
       - --certificatesresolvers.le.acme.keytype=EC384
       # Optimiize Traefik performance
       - --serversTransport.maxIdleConnsPerHost=10
-      - --serversTransport.forwardingTimeouts.dialTimeout=10s
-      - --entrypoints.https.http2.maxConcurrentStreams=100
-      - --entrypoints.https.http2.maxStreamsPerConnection=50
+      - --serversTransport.dialTimeout=10s
       # Logging and API configuration
       - --accesslog
       - --log
@@ -113,7 +132,7 @@ services:
     networks:
       - traefik-server # Public network for Traefik and other services
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      test: ["CMD", "traefik", "healthcheck", "ping"]
       interval: 10s
       timeout: 2s
       retries: 3
