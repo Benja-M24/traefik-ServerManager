@@ -100,9 +100,12 @@ services:
       # HTTP/3
       - --entrypoints.https.http3=true
       - --http.transport.http2.maxConcurrentStreams=100
-      - --entrypoints.https.http.tls.minVersion=VersionTLS13
       ## TODO CREATE A FILE TO IMPROVE SECURITY HEADERS https://securityheaders.com/
-      - --entrypoints.https.http.tls.options=modern@file
+      ### TLS Custom Options
+      - --tls.options.myTLS.minVersion=VersionTLS13
+      - --tls.options.myTLS.cipherSuites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256
+      - --tls.options.myTLS.curvePreferences=X25519,P-256,P-384
+      - --entrypoints.https.http.tls.options=myTLS
       # Metrics configuration
       - --metrics.prometheus.manualRouting=true
       - --metrics.prometheus.addentrypointslabels=true
