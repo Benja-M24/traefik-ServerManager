@@ -98,8 +98,9 @@ services:
       - --entrypoints.http.http.redirections.entrypoint.to=https
       - --entrypoints.http.http.redirections.entrypoint.scheme=https
       # HTTP/3
-      - --entrypoints.https.http3=true
+      - --entrypoints.https.http3={}
       - --http.transport.http2.maxConcurrentStreams=100
+      - --http.transport.http2.maxStreamsPerConnection=50
       ## TODO CREATE A FILE TO IMPROVE SECURITY HEADERS https://securityheaders.com/
       ### TLS Custom Options
       - --tls.options.myTLS.minVersion=VersionTLS13
