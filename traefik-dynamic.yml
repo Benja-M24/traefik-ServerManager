@@ -1,0 +1,15 @@
+tls:
+  options:
+    myTLS:
+      # Enforce TLS 1.3 for stronger security
+      minVersion: VersionTLS13
+      # Define strong cipher suites
+      cipherSuites:
+        - TLS_AES_128_GCM_SHA256
+        - TLS_AES_256_GCM_SHA384
+        - TLS_CHACHA20_POLY1305_SHA256
+      # Specify curve preferences for ECDHE key exchanges
+      curvePreferences:
+        - X25519
+        - P-256
+        - P-384

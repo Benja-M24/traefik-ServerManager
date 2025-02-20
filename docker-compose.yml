@@ -81,6 +81,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
+      - ./traefik-dynamic.yml:/etc/traefik/traefik-dynamic.yml:ro  # Mount dynamic config file
     environment:
       - CLOUDFLARE_DNS_API_TOKEN=${CF_API_TOKEN}  # Token Cloudflare DNS:Edit
     command:
@@ -101,23 +102,21 @@ services:
       - --entrypoints.http.http.redirections.entryPoint.scheme=https
       # HTTP/3
       - --entrypoints.https.http3
-      - --http.transport.http2.maxConcurrentStreams=100
-      - --http.transport.http2.maxStreamsPerConnection=50
-      ## TODO CREATE A FILE TO IMPROVE SECURITY HEADERS https://securityheaders.com/
+      - --entrypoints.http.http2.maxConcurrentStreams=100
       ### TLS Custom Options
-      - --tls.options.myTLS.minVersion=VersionTLS13
-      - --tls.options.myTLS.cipherSuites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256
-      - --tls.options.myTLS.curvePreferences=X25519,P-256,P-384
-      - --entrypoints.https.tls.options=myTLS
+      - --providers.file.filename=/etc/traefik/traefik-dynamic.yml
+      - --entrypoints.https.http3.tls.options=myTLS 
       # Metrics configuration
       - --metrics.prometheus.manualrouting=true
       - --metrics.prometheus.addentrypointslabels=true
       - --metrics.prometheus.addserviceslabels=true
       - --metrics.prometheus.addrouterslabels=true
       - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+
       # Docker provider configuration
-      - --providers.docker
-      - --providers.docker.exposedbydefault=false
+      ### para que sirven estas lineas?
+      # - --providers.docker
+      # - --providers.docker.exposedbydefault=false
       # Let's Encrypt configuration
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL?Variable not set}
       - --certificatesresolvers.le.acme.storage=/certificates/acme.json
