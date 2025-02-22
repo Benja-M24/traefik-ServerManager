@@ -1,23 +1,24 @@
 services:
 # WatchTower
-  watchtower:
-    image: containrrr/watchtower
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command:
-      - "--label-enable"
-      - "--interval"
-      - "3600"
-      - "--rolling-restart"
-    networks:
-      - traefik-server
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   restart: always
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command:
+  #     - "--label-enable"
+  #     - "--interval"
+  #     - "3600"
+  #     - "--rolling-restart"
+  #   networks:
+  #     - traefik-server
 # Traefik
   traefik:
     image: ghcr.io/benja-m24/traefik-servermanager:lts
     ports:
       - 80:80 # HTTP port
       - 443:443 # HTTPS port
+      - 443:443/udp # HTTP/3 port
       # SMTP ports
       - 25:25
       - 143:143 # No SSL/TLS
@@ -27,33 +28,33 @@ services:
     restart: always
     labels:
       # WatchTower monitoring testing
-      - com.centurylinklabs.watchtower.enable=true
-      - com.centurylinklabs.watchtower.scope=main-images
-      #SMTP Configuration
-      # - traefik.tcp.routers.nextcloud-smtp.rule=HostSNI(`*`)
-      # - traefik.tcp.routers.nextcloud-smtp.entrypoints=smtp
-      # - traefik.tcp.services.nextcloud-smtp.loadbalancer.server.port=25
+      # - com.centurylinklabs.watchtower.enable=true
+      # - com.centurylinklabs.watchtower.scope=main-images
+
       # Traefik configuration
       - traefik.enable=true
       - traefik.docker.network=traefik-server
-      - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
-      # HTTP router configuration
+
+      # HTTPS redirect middleware
+      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      # Basic Auth middleware
+      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+      
+      # Dashboard router configuration
+      ## HTTP
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
       - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN?Variable not set}`)
-      # HTTPS router configuration
+      ## HTTPS
       - traefik.http.routers.traefik-dashboard-https.entrypoints=https
       - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN?Variable not set}`)
       - traefik.http.routers.traefik-dashboard-https.tls=true
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
-      # HTTPS redirect middleware
-      - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
-      - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
-      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
-
-      # HTTP Basic Auth middleware
-      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
-      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
+      - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
+      
+      # Aplicate Middleware
+      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect,admin-auth
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
@@ -71,8 +72,14 @@ services:
       # Entrypoints configuration
       - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
-      # Docker provider configuration
+      # HTTP/3
+      - --entrypoints.https.http3
+      - --entrypoints.http.http2.maxConcurrentStreams=100
+      # Enables the Docker provider for Traefik, allowing it to detect containers
+      # and dynamically configure routing (routers, middlewares, services) based on container labels.
       - --providers.docker
+      # By default, containers are not exposed to Traefik; only those explicitly marked with
+      # 'traefik.enable=true' will be managed. This provides granular control and enhances security.
       - --providers.docker.exposedbydefault=false
       # Let's Encrypt configuration
       - --certificatesresolvers.le.acme.email=${ACME_EMAIL?Variable not set}
@@ -81,12 +88,21 @@ services:
       - --certificatesresolvers.le.acme.dnschallenge.provider=cloudflare
       - --certificatesresolvers.le.acme.dnschallenge.delaybeforecheck=30
       - --certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
+      # Optimiize Traefik performance
+      - --serversTransport.maxIdleConnsPerHost=10
+      - --serversTransport.forwardingTimeouts.dialTimeout=10s
+      - --serversTransport.forwardingTimeouts.responseHeaderTimeout=30s
       # Logging and API configuration
       - --accesslog
       - --log
       - --api
     networks:
       - traefik-server # Public network for Traefik and other services
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "ping"]
+      interval: 10s
+      timeout: 2s
+      retries: 3
 
 volumes:
   traefik-server-certificates: # Persistent volume for certificates
