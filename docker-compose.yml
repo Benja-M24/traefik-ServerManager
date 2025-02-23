@@ -35,11 +35,21 @@ services:
       - traefik.enable=true
       - traefik.docker.network=traefik-server
 
-      # HTTPS redirect middleware
+      ## 1 - HTTPS redirect middleware
       - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
-      # Basic Auth middleware
+      ## 2 - security-headers middleware
+      - traefik.http.middlewares.security-headers.headers.sslRedirect=true
+      - traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.security-headers.headers.stsPreload=true
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Frame-Options=SAMEORIGIN
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.X-XSS-Protection=1; mode=block
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.security-headers.headers.customresponseheaders.Content-Security-Policy=default-src 'self'
+      ## 3 - Basic Auth middleware
       - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
+      
       # Dashboard router configuration
       ## HTTP
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
@@ -54,7 +64,7 @@ services:
 
       # Aplicate Middleware
       - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
-      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
+      - traefik.http.routers.traefik-dashboard-https.middlewares=security-headers,admin-auth
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
