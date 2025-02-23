@@ -51,23 +51,41 @@ services:
       ### Permissions-Policy
       - traefik.http.middlewares.security-headers.headers.customresponseheaders.Permissions-Policy="camera=(), microphone=(), geolocation=(), display-capture=(), payment=(), gyroscope=(), encrypted-media=(), fullscreen=(), picture-in-picture=(), speaker=(), document-domain=(), unsized-media=(), oversized-images=(), layout-animations=()"
       ## 3 - Basic Auth middleware
-      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
-      
+      - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
+      ## 4 - Rate limiting middleware
+      - traefik.http.middlewares.metrics-ratelimit.rateLimit.average=30
+      - traefik.http.middlewares.metrics-ratelimit.rateLimit.burst=50
+
       # Dashboard router configuration
       ## HTTP
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
-      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN}`)
       ## HTTPS
       - traefik.http.routers.traefik-dashboard-https.entrypoints=https
-      - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN?Variable not set}`)
+      - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN}`)
       - traefik.http.routers.traefik-dashboard-https.tls=true
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
       - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
-
-      # Aplicate Middleware
+      ## Aplicate Middleware
       - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
       - traefik.http.routers.traefik-dashboard-https.middlewares=security-headers,admin-auth
+
+      # HTTP router configuration for Traefik metrics
+      ## HTTP
+      - traefik.http.routers.metrics-http.entrypoints=http
+      - traefik.http.routers.metrics-http.rule=Host(`metrics.${DOMAIN}`)
+      ## HTTP router
+      - traefik.http.routers.metrics-https.entrypoints=https
+      - traefik.http.routers.metrics-https.rule=Host(`metrics.${DOMAIN}`)
+      - traefik.http.routers.metrics-https.tls=true
+      - traefik.http.routers.metrics-https.tls.certresolver=le
+      - traefik.http.routers.metrics-https.service=metrics@internal
+      - traefik.http.services.metrics-https.loadbalancer.server.port=8082
+      ## Aplicate Middleware
+      - traefik.http.middlewares.auth-metrics.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
+      - traefik.http.routers.metrics-http.middlewares=auth-metrics
+      - traefik.http.routers.metrics-https.middlewares=auth-metrics,security-headers,metrics-ratelimit
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
@@ -85,6 +103,13 @@ services:
       # Entrypoints configuration
       - --entrypoints.http.address=:80
       - --entrypoints.https.address=:443
+      - --entrypoints.metrics.address=:8082
+      # Metrics configuration
+      - --metrics.prometheus.manualrouting=true
+      - --metrics.prometheus.addentrypointslabels=true
+      - --metrics.prometheus.addserviceslabels=true
+      - --metrics.prometheus.addrouterslabels=true
+      - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
       # HTTP/3
       - --entrypoints.https.http3
       - --entrypoints.http.http2.maxConcurrentStreams=100
