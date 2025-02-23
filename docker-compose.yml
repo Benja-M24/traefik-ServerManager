@@ -80,7 +80,7 @@ services:
       - traefik.http.routers.metrics-https.rule=Host(`metrics.${DOMAIN}`)
       - traefik.http.routers.metrics-https.tls=true
       - traefik.http.routers.metrics-https.tls.certresolver=le
-      - traefik.http.routers.metrics-https.service=metrics@internal
+      - traefik.http.routers.metrics-https.service=prometheus@internal
       - traefik.http.services.metrics-https.loadbalancer.server.port=8082
       ## Aplicate Middleware
       - traefik.http.middlewares.auth-metrics.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
@@ -105,11 +105,12 @@ services:
       - --entrypoints.https.address=:443
       - --entrypoints.metrics.address=:8082
       # Metrics configuration
-      - --metrics.prometheus.manualrouting=true
+#      - --metrics.prometheus.addinternals=true
       - --metrics.prometheus.addentrypointslabels=true
-      - --metrics.prometheus.addserviceslabels=true
       - --metrics.prometheus.addrouterslabels=true
+      - --metrics.prometheus.addserviceslabels=true
       - --metrics.prometheus.buckets=0.1,0.3,1.2,5.0
+      - --metrics.prometheus.manualrouting=true
       # HTTP/3
       - --entrypoints.https.http3
       - --entrypoints.http.http2.maxConcurrentStreams=100
