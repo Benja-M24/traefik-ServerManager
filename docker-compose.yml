@@ -60,6 +60,8 @@ services:
       ## HTTP
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
       - traefik.http.routers.traefik-dashboard-http.rule=Host(`traefik.${DOMAIN}`)
+      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
+      - traefik.http.routers.traefik-dashboard-http.service=api@internal
       ## HTTPS
       - traefik.http.routers.traefik-dashboard-https.entrypoints=https
       - traefik.http.routers.traefik-dashboard-https.rule=Host(`traefik.${DOMAIN}`)
@@ -68,23 +70,23 @@ services:
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
       - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
       ## Aplicate Middleware
-      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
       - traefik.http.routers.traefik-dashboard-https.middlewares=security-headers,admin-auth
 
       # HTTP router configuration for Traefik metrics
       ## HTTP
       - traefik.http.routers.metrics-http.entrypoints=http
       - traefik.http.routers.metrics-http.rule=Host(`metrics.${DOMAIN}`)
+      - traefik.http.routers.metrics-http.middlewares=auth-metrics
+      - traefik.http.routers.metrics-http.service=prometheus@internal
       ## HTTP router
       - traefik.http.routers.metrics-https.entrypoints=https
       - traefik.http.routers.metrics-https.rule=Host(`metrics.${DOMAIN}`)
       - traefik.http.routers.metrics-https.tls=true
       - traefik.http.routers.metrics-https.tls.certresolver=le
       - traefik.http.routers.metrics-https.service=prometheus@internal
-      - traefik.http.services.metrics-https.loadbalancer.server.port=8082
+      - traefik.http.services.metrics.loadbalancer.server.port=8082
       ## Aplicate Middleware
       - traefik.http.middlewares.auth-metrics.basicauth.users=${USERNAME}:${HASHED_PASSWORD}
-      - traefik.http.routers.metrics-http.middlewares=auth-metrics
       - traefik.http.routers.metrics-https.middlewares=auth-metrics,security-headers,metrics-ratelimit
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
