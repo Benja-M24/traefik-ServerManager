@@ -40,7 +40,6 @@ services:
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
       # Basic Auth middleware
       - traefik.http.middlewares.admin-auth.basicauth.users=${USERNAME?Variable not set}:${HASHED_PASSWORD?Variable not set}
-      
       # Dashboard router configuration
       ## HTTP
       - traefik.http.routers.traefik-dashboard-http.entrypoints=http
@@ -52,9 +51,10 @@ services:
       - traefik.http.routers.traefik-dashboard-https.tls.certresolver=le
       - traefik.http.routers.traefik-dashboard-https.service=api@internal
       - traefik.http.services.traefik-dashboard.loadbalancer.server.port=8080
-      
+
       # Aplicate Middleware
-      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect,admin-auth
+      - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
+      - traefik.http.routers.traefik-dashboard-https.middlewares=admin-auth
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Docker socket for reading service labels
       - traefik-server-certificates:/certificates # Certificate storage
@@ -98,11 +98,6 @@ services:
       - --api
     networks:
       - traefik-server # Public network for Traefik and other services
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "ping"]
-      interval: 10s
-      timeout: 2s
-      retries: 3
 
 volumes:
   traefik-server-certificates: # Persistent volume for certificates
